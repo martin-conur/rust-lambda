@@ -33,7 +33,10 @@ async fn function_handler(event: LambdaEvent<Request>) -> Result<Response, Error
     // Prepare the response
     let resp = Response {
         req_id: event.context.request_id,
-        msg: format!("Command {}.", command),
+        msg: match command.to_lowercase().as_str() {
+            "marco" => "polo".to_string(),
+            _ => "Not Polo".to_string(),
+        },
     };
 
     // Return `Response` (it will be serialized to JSON automatically by the runtime)
