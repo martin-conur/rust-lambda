@@ -3,10 +3,9 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 use rust_stemmers::{Algorithm, Stemmer};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
-/// This is a made-up example. Requests come into the runtime as unicode
-/// strings in json format, which can map to any structure that implements `serde::Deserialize`
-/// The runtime pays no attention to the contents of the request payload.
+
 #[derive(Deserialize)]
 struct Request {
     phrase: String,
@@ -14,23 +13,29 @@ struct Request {
     language: String,
 }
 
-/// This is a made-up example of what a response structure may look like.
-/// There is no restriction on what it can be. The runtime requires responses
-/// to be serialized into json. The runtime pays no attention
-/// to the contents of the response payload.
 #[derive(Serialize)]
 struct Response {
     req_id: String,
     msg: String,
 }
-#[derive(Debug)]
-struct BadLanguageError;
+#[derive(Debug, Serialize)]
+struct BadLanguageError{
+    req_id: String,
+    msg: String,
+}
 
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
-/// - https://github.com/aws-samples/serverless-rust-demo/
+impl std::error::Error for BadLanguageError {
+    // this implementation required `Debug` and `Display` traits
+}
+
+impl std::fmt::Display for BadLanguageError {
+    /// Display the error struct as a JSON string
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let err_as_json = json!(self).to_string();
+        write!(f, "{}", err_as_json)
+    }
+}
+
 async fn function_handler(event: LambdaEvent<Request>) -> Result<Response, Error> {
     // Extract some useful info from the request
     let phrase = event.payload.phrase;
@@ -40,7 +45,13 @@ async fn function_handler(event: LambdaEvent<Request>) -> Result<Response, Error
         match event.payload.language.to_lowercase().as_str() {
             "spanish" => Ok(Stemmer::create(Algorithm::Spanish)),
             "english" => Ok(Stemmer::create(Algorithm::English)),
-            _ => Err(BadLanguageError),
+            other @ _ => {
+                let lang_error = BadLanguageError {
+                    req_id: event.context.request_id,
+                    msg: format!("Invalid language parameter, only 'Spanish' and 'English' available, but '{other}' received!"),
+                };
+                return Err(Box::new(lang_error));
+            },
         };
 
     

@@ -11,7 +11,7 @@ run:
 	cargo run
 
 invoke:
-	cargo lambda invoke --data-ascii "{ \"phrase\": \"desesperadamente todo todisimo fue en vano\", \"language\": \"spanish\" }"
+	cargo lambda invoke --data-ascii "{ \"phrase\": \"desesperadamente todo todisimo fue en vano\", \"language\": \"arab\" }"
 
 release-arm: 
 	cargo lambda build --release --arm64
